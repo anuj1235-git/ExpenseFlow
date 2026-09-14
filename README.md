@@ -3,6 +3,9 @@
 > A production-style personal finance management application built with React, featuring user authentication, transaction management, budget tracking, financial analytics, goal tracking, and data import/export — all powered by LocalStorage with full user-data isolation.
 
 <br/>
+## 🚀 Live Demo
+
+👉 [ExpenseFlow – Live Demo](https://expense-flow2.vercel.app/login)
 
 ## Author
 
