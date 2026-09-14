@@ -1,0 +1,22 @@
+export const expenseCategories=['Food',
+'Shopping',
+'Transportation',
+'Bills',
+'Entertainment',
+'Health',
+'Education',
+'Travel',
+'Rent',
+'Other'];
+export const incomeCategories=['Salary',
+'Freelance',
+'Business',
+'Investment',
+'Gift',
+'Other'];
+export const paymentMethods=['Cash',
+'UPI',
+'Credit Card',
+'Debit Card',
+'Bank Transfer',
+'Other'];
