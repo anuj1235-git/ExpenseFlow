@@ -5,3 +5,7 @@ dist/
 !.env.example
 .DS_Store
 *.log
+
+
+
+git remote set-url origin https://github.com/anuj1235-git/ExpenseFlow.git

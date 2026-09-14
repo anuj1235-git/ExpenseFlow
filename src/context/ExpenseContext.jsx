@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState
 }
@@ -39,36 +40,24 @@ const prefix = user ? `expenseflow_${user.id}` : 'expenseflow_guest';
 const transactionKey = `${prefix}_transactions`;
 const budgetKey = `${prefix}_budgets`;
 const goalKey = `${prefix}_goals`;
-const [transactions,
-setTransactions] = useState([]);
-const [budgets,
-setBudgets] = useState( {
-}
-);
-const [goals,
-setGoals] = useState([]);
-// Reset/load when account changes.
-useState(() => {
+const [transactions, setTransactions] = useState([]);
+const [budgets,      setBudgets]      = useState({});
+const [goals,        setGoals]        = useState([]);
+
+// Re-load data whenever the logged-in user changes (login / logout / account switch).
+useEffect(() => {
   if (user) {
-    const existing = readStorage(transactionKey,
-    null);
+    const existing = readStorage(transactionKey, null);
     setTransactions(existing ?? sampleTransactions);
-    setBudgets(readStorage(budgetKey,
-    {
-    }
-  ));
-  setGoals(readStorage(goalKey,
-  []));
-}
-else {
-  setTransactions([]);
-  setBudgets( {
+    setBudgets(readStorage(budgetKey, {}));
+    setGoals(readStorage(goalKey, []));
+  } else {
+    setTransactions([]);
+    setBudgets({});
+    setGoals([]);
   }
-);
-setGoals([]);
-}
-}
-);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [user?.id]); // only re-run when the actual user identity changes
 // The provider can be mounted before auth changes; derive a fresh key by
 // keeping all writes scoped to the current user's id.
 const persistTransactions = (next) => {
