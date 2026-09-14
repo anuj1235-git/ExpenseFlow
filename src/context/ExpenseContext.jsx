@@ -47,8 +47,7 @@ const [goals,        setGoals]        = useState([]);
 // Re-load data whenever the logged-in user changes (login / logout / account switch).
 useEffect(() => {
   if (user) {
-    const existing = readStorage(transactionKey, null);
-    setTransactions(existing ?? sampleTransactions);
+    setTransactions(readStorage(transactionKey, []));
     setBudgets(readStorage(budgetKey, {}));
     setGoals(readStorage(goalKey, []));
   } else {
