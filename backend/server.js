@@ -1,87 +1,196 @@
 'use strict';
 
-const express    = require('express');
-const cors       = require('cors');
-const helmet     = require('helmet');
-const morgan     = require('morgan');
-const dotenv     = require('dotenv');
-const rateLimit  = require('express-rate-limit');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const dotenv = require('dotenv');
+const rateLimit = require('express-rate-limit');
 
 dotenv.config();
 
-const connectDB        = require('./config/db');
-const authRoutes        = require('./routes/authRoutes');
-const transactionRoutes = require('./routes/transactionRoutes');
-const budgetRoutes      = require('./routes/budgetRoutes');
-const goalRoutes        = require('./routes/goalRoutes');
-const analyticsRoutes   = require('./routes/analyticsRoutes');
-const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+const connectDB = require('./config/db');
 
-// ── Connect to MongoDB ──────────────────────────────────────────────────────
+const authRoutes = require('./routes/authRoutes');
+const transactionRoutes = require('./routes/transactionRoutes');
+const budgetRoutes = require('./routes/budgetRoutes');
+const goalRoutes = require('./routes/goalRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+
+const {
+  notFound,
+  errorHandler,
+} = require('./middleware/errorMiddleware');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Connect to MongoDB
+// ─────────────────────────────────────────────────────────────────────────────
+
 connectDB();
 
 const app = express();
 
-// ── Security headers ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Security Headers
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use(helmet());
 
-// ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+// ─────────────────────────────────────────────────────────────────────────────
+// CORS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// CLIENT_URL can contain multiple comma-separated frontend URLs.
+// Example:
+// CLIENT_URL=http://localhost:5173,https://your-app.vercel.app
+
+const allowedOrigins = (
+  process.env.CLIENT_URL || 'http://localhost:5173'
+)
   .split(',')
-  .map((o) => o.trim());
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin(origin, cb) {
-      // Allow requests with no origin (mobile apps, Postman, curl)
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      cb(new Error(`CORS: origin ${origin} is not allowed`));
+    origin: function (origin, callback) {
+      // Allow requests without an Origin header
+      // (Postman, curl, mobile apps, server-to-server requests, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Allow only configured frontend origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error(`CORS: origin ${origin} is not allowed`)
+      );
     },
+
     credentials: true,
+
+    methods: [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'OPTIONS',
+    ],
+
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+    ],
   })
 );
 
-// ── Body parsing ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Body Parsing
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use(express.json({ limit: '1mb' }));
+
 app.use(express.urlencoded({ extended: true }));
 
-// ── HTTP request logging (dev only) ──────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// HTTP Request Logging
+// ─────────────────────────────────────────────────────────────────────────────
+
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// ── Rate limiting for auth endpoints ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Rate Limiting for Authentication
+// ─────────────────────────────────────────────────────────────────────────────
+
 const authLimiter = rateLimit({
-  windowMs : 15 * 60 * 1000, // 15 minutes
-  max      : 30,              // max 30 auth attempts per window
+  windowMs: 15 * 60 * 1000,
+
+  max: 30,
+
   standardHeaders: true,
-  legacyHeaders  : false,
+
+  legacyHeaders: false,
+
   message: {
     success: false,
-    message: 'Too many requests from this IP. Please try again after 15 minutes.',
+    message:
+      'Too many requests from this IP. Please try again after 15 minutes.',
   },
 });
 
-// ── API routes ────────────────────────────────────────────────────────────────
-app.use('/api/auth',         authLimiter, authRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/budgets',      budgetRoutes);
-app.use('/api/goals',        goalRoutes);
-app.use('/api/analytics',    analyticsRoutes);
+// ─────────────────────────────────────────────────────────────────────────────
+// API Routes
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ── Health check ──────────────────────────────────────────────────────────────
+app.use(
+  '/api/auth',
+  authLimiter,
+  authRoutes
+);
+
+app.use(
+  '/api/transactions',
+  transactionRoutes
+);
+
+app.use(
+  '/api/budgets',
+  budgetRoutes
+);
+
+app.use(
+  '/api/goals',
+  goalRoutes
+);
+
+app.use(
+  '/api/analytics',
+  analyticsRoutes
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Health Check
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.get('/api/health', (_req, res) => {
-  res.json({ success: true, message: 'ExpenseFlow API is running', timestamp: new Date() });
+  res.json({
+    success: true,
+    message: 'ExpenseFlow API is running',
+    timestamp: new Date(),
+  });
 });
 
-// ── 404 + global error handler ────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// 404 Handler
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use(notFound);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Global Error Handler
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use(errorHandler);
 
-// ── Start server ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Start Server
+// ─────────────────────────────────────────────────────────────────────────────
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`\n🚀  ExpenseFlow API running on port ${PORT}`);
-  console.log(`   Environment : ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   Allowed origins : ${allowedOrigins.join(', ')}\n`);
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('\n🚀 ExpenseFlow API running');
+  console.log(`   Port            : ${PORT}`);
+  console.log(
+    `   Environment     : ${process.env.NODE_ENV || 'development'}`
+  );
+  console.log(
+    `   Allowed origins : ${allowedOrigins.join(', ')}\n`
+  );
 });
