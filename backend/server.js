@@ -40,6 +40,10 @@ app.use(helmet());
 // CORS
 // ─────────────────────────────────────────────────────────────────────────────
 
+// CLIENT_URL can contain multiple comma-separated frontend URLs.
+// Example:
+// CLIENT_URL=http://localhost:5173,https://your-app.vercel.app
+
 const allowedOrigins = (
   process.env.CLIENT_URL || 'http://localhost:5173'
 )
@@ -50,31 +54,23 @@ const allowedOrigins = (
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests without an Origin header
-      // such as Postman, curl, mobile apps, etc.
+      // Requests without Origin header
       if (!origin) {
         return callback(null, true);
       }
 
-      // Allow explicitly configured origins
+      // Exact origins from CLIENT_URL
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      /*
-       * Allow all Vercel deployment URLs belonging to this project.
-       *
-       * Examples:
-       * https://expense-flow-abc-c134.vercel.app
-       * https://expense-flow-ff79bcyqn-abc-c134.vercel.app
-       * https://expense-flow-q13gon13j-abc-c134.vercel.app
-       */
-      const isExpenseFlowVercelOrigin =
-        /^https:\/\/expense-flow(?:-[a-z0-9-]+)?-abc-c134\.vercel\.app$/i.test(
+      // Allow all Vercel deployments of this ExpenseFlow project
+      const isExpenseFlowVercel =
+        /^https:\/\/expense-flow(?:-[a-z0-9]+)?-abc-c134\.vercel\.app$/.test(
           origin
         );
 
-      if (isExpenseFlowVercelOrigin) {
+      if (isExpenseFlowVercel) {
         return callback(null, true);
       }
 
@@ -100,7 +96,6 @@ app.use(
     ],
   })
 );
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Body Parsing
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,12 +194,11 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('\n🚀 ExpenseFlow API running');
-  console.log(`   Port             : ${PORT}`);
+  console.log(`   Port            : ${PORT}`);
   console.log(
-    `   Environment      : ${process.env.NODE_ENV || 'development'}`
+    `   Environment     : ${process.env.NODE_ENV || 'development'}`
   );
   console.log(
-    `   Allowed origins  : ${allowedOrigins.join(', ')}`
+    `   Allowed origins : ${allowedOrigins.join(', ')}\n`
   );
-  console.log('');
 });
